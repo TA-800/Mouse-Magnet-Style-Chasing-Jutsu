@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-
-const ICON_OFFSET = 50;
+import { useCallback, useRef } from "react";
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
@@ -15,13 +13,15 @@ export default function Home() {
 }
 
 function MagneticButton() {
+    const ICON_OFFSET = 50; // how much the icon moves when the mouse is hovering over it
+    const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
     const currentPoint = { x: 0, y: 0 };
     const targetPoint = { x: 0, y: 0 };
     // if animationID is null, then the animation loop is not running
     let animationID: number | null = null;
     const childRef = useRef<HTMLDivElement>(null);
 
-    // useCallback to prevent unnecessary redefinition of lerp function (prevents glitched animation on state change)
+    // useCallback to prevent unnecessary redefinition of lerp function (prevents glitchy animation on state change)
     const lerp = useCallback(() => {
         const dx = targetPoint.x - currentPoint.x;
         const dy = targetPoint.y - currentPoint.y;
@@ -43,6 +43,7 @@ function MagneticButton() {
             childRef.current.style.setProperty("transform", `translate(${currentPoint.x}px, ${currentPoint.y}px)`);
         }
 
+        // keep the animation loop running
         animationID = requestAnimationFrame(lerp);
     }, []);
 
@@ -74,7 +75,7 @@ function MagneticButton() {
 
             // scale up the child element for hover effect
             const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-            child.style.scale = "1.15";
+            child.style.scale = ICON_SCALE;
 
             // start animation loop if it is not running
             if (!animationID) requestAnimationFrame(lerp);
@@ -93,8 +94,10 @@ function MagneticButton() {
         }
     }, []);
 
-    // start animation loop
-    // similar to Unity's Update() function
+    /*
+        Start animation loop (similar to Unity's Update() function).
+        Called every frame to update the position of the icon, non-blocking.
+    */
     requestAnimationFrame(lerp);
 
     return (
