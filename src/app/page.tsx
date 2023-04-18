@@ -1,15 +1,24 @@
 "use client";
 
-// delay in transition for icon move effect
-const MOUSE_TRANSITION_DELAY = 50;
-const MOUSE_TRANSITION = `all 0.5s ease-in-out`;
-
 export default function Home() {
-    const handleMouseEnter = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        // disable transition on mouse enter
-        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        child.style.transition = "scale 0.25s ease-out";
-    };
+    const currentPoint = { x: 0, y: 0 };
+    const targetPoint = { x: 0, y: 0 };
+
+    function lerp() {
+        const dx = targetPoint.x - currentPoint.x;
+        const dy = targetPoint.y - currentPoint.y;
+
+        currentPoint.x += dx * 0.05;
+        currentPoint.y += dy * 0.05;
+
+        // console.log(`currentPoint.x: ${currentPoint.x}, dx: ${dx} targetPoint.x: ${targetPoint.x}`);
+
+        // set translateX and translateY CSS variables to the normalized values
+        const child = document.querySelector("button")?.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
+        if (child) child.style.setProperty("transform", `translate(${currentPoint.x}px, ${currentPoint.y}px)`);
+
+        requestAnimationFrame(lerp);
+    }
 
     const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         // get the x and y coordinates of the mouse
@@ -32,36 +41,39 @@ export default function Home() {
         const normalizedX = (2 * (distanceX - -maxDistanceX)) / (maxDistanceX - -maxDistanceX) - 1;
         const normalizedY = (2 * (distanceY - -maxDistanceY)) / (maxDistanceY - -maxDistanceY) - 1;
 
-        // set translateX and translateY CSS variables to the normalized values
+        // set targetPoint to the normalized values
+        targetPoint.x = normalizedX * 50; // multiply by 50 to make movement significant
+        targetPoint.y = normalizedY * 50;
+
+        // scale up the child element for hover effect
         const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        child.style.transform = `translateX(${normalizedX * 25}px) translateY(${normalizedY * 25}px)`;
-        child.style.scale = "1.5";
+        child.style.scale = "1.15";
     };
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        // re-enable transition on mouse leave
-        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        child.style.transition = MOUSE_TRANSITION;
-        child.style.scale = "1";
+    lerp();
 
-        // reset position of icon after MOUSE_TRANSITION_DELAY to add smooth transition back to original position
-        setTimeout(() => {
-            child.style.transform = `translateX(0px) translateY(0px)`;
-        }, MOUSE_TRANSITION_DELAY);
+    const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        // set targetPoint to 0 when mouse leaves the element
+        targetPoint.x = 0;
+        targetPoint.y = 0;
+
+        // scale down the child element
+        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
+        child.style.scale = "1";
     };
 
     return (
         <main className="flex flex-row gap-10 justify-center items-center mt-20">
             <button
-                className="p-12 border-0 border-red-500/50 rounded-full"
+                className="p-12 border-2 border-red-500/50 rounded-full"
                 // make the icon move with the mouse (fancy magnet effect)
-                onMouseEnter={(e) => handleMouseEnter(e)}
                 onMouseMove={(e) => handleMouseMove(e)}
                 onMouseLeave={(e) => handleMouseLeave(e)}>
                 <div
                     className="p-3 rounded-full bg-black"
                     style={{
-                        transition: MOUSE_TRANSITION,
+                        // apply transition only to scale property
+                        transition: "scale 0.25s ease-out",
                     }}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -77,3 +89,34 @@ export default function Home() {
         </main>
     );
 }
+
+/*
+ const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+
+        // get the x and y coordinates of the mouse
+        const x = e.clientX;
+        const y = e.clientY;
+
+        // get middle of element where the mouse is hovering
+        const middleX = e.currentTarget.offsetLeft + e.currentTarget.offsetWidth / 2;
+        const middleY = e.currentTarget.offsetTop + e.currentTarget.offsetHeight / 2;
+
+        // get the distance between the mouse and the middle of the element
+        const distanceX = x - middleX;
+        const distanceY = y - middleY;
+
+        // get largest and smallest possible distance
+        const maxDistanceX = e.currentTarget.offsetWidth / 2;
+        const maxDistanceY = e.currentTarget.offsetHeight / 2;
+
+        // normalize between -1 and 1 using the following formula: [2 * (distance - min) / (max - min)] - 1
+        const normalizedX = (2 * (distanceX - -maxDistanceX)) / (maxDistanceX - -maxDistanceX) - 1;
+        const normalizedY = (2 * (distanceY - -maxDistanceY)) / (maxDistanceY - -maxDistanceY) - 1;
+
+        // set translateX and translateY CSS variables to the normalized values
+        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
+
+        // console.log(
+        //     "lerped x: " + lerp(0, 10, normalizedX),
+        // )
+    };*/
