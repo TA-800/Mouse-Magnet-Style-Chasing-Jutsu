@@ -1,11 +1,14 @@
 "use client";
 
+import { useCallback, useRef, useState } from "react";
+
 const ICON_OFFSET = 50;
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
     return (
         <main className="flex flex-row gap-10 justify-center items-center mt-20">
+            <MagneticButton />
             <MagneticButton />
         </main>
     );
@@ -16,8 +19,10 @@ function MagneticButton() {
     const targetPoint = { x: 0, y: 0 };
     // if animationID is null, then the animation loop is not running
     let animationID: number | null = null;
+    const childRef = useRef<HTMLDivElement>(null);
 
-    function lerp() {
+    // useCallback to prevent unnecessary redefinition of lerp function (prevents glitched animation on state change)
+    const lerp = useCallback(() => {
         const dx = targetPoint.x - currentPoint.x;
         const dy = targetPoint.y - currentPoint.y;
 
@@ -34,54 +39,59 @@ function MagneticButton() {
         console.log(`cp.x: ${currentPoint.x}, dx: ${dx} tp.x: ${targetPoint.x}`);
 
         // set translateX and translateY CSS variables to the normalized values
-        const child = document.querySelector("button")?.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        if (child) child.style.setProperty("transform", `translate(${currentPoint.x}px, ${currentPoint.y}px)`);
+        if (childRef.current) {
+            childRef.current.style.setProperty("transform", `translate(${currentPoint.x}px, ${currentPoint.y}px)`);
+        }
 
         animationID = requestAnimationFrame(lerp);
-    }
+    }, []);
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        // get the x and y coordinates of the mouse
-        const x = e.clientX;
-        const y = e.clientY;
+    const handleMouseMove = useCallback(
+        (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+            // get the x and y coordinates of the mouse
+            const x = e.clientX;
+            const y = e.clientY;
 
-        // get middle of element where the mouse is hovering
-        const middleX = e.currentTarget.offsetLeft + e.currentTarget.offsetWidth / 2;
-        const middleY = e.currentTarget.offsetTop + e.currentTarget.offsetHeight / 2;
+            // get middle of element where the mouse is hovering
+            const middleX = e.currentTarget.offsetLeft + e.currentTarget.offsetWidth / 2;
+            const middleY = e.currentTarget.offsetTop + e.currentTarget.offsetHeight / 2;
 
-        // get the distance between the mouse and the middle of the element
-        const distanceX = x - middleX;
-        const distanceY = y - middleY;
+            // get the distance between the mouse and the middle of the element
+            const distanceX = x - middleX;
+            const distanceY = y - middleY;
 
-        // get largest and smallest possible distance
-        const maxDistanceX = e.currentTarget.offsetWidth / 2;
-        const maxDistanceY = e.currentTarget.offsetHeight / 2;
+            // get largest and smallest possible distance
+            const maxDistanceX = e.currentTarget.offsetWidth / 2;
+            const maxDistanceY = e.currentTarget.offsetHeight / 2;
 
-        // normalize between -1 and 1 using the following formula: [2 * (distance - min) / (max - min)] - 1
-        const normalizedX = (2 * (distanceX - -maxDistanceX)) / (maxDistanceX - -maxDistanceX) - 1;
-        const normalizedY = (2 * (distanceY - -maxDistanceY)) / (maxDistanceY - -maxDistanceY) - 1;
+            // normalize between -1 and 1 using the following formula: [2 * (distance - min) / (max - min)] - 1
+            const normalizedX = (2 * (distanceX - -maxDistanceX)) / (maxDistanceX - -maxDistanceX) - 1;
+            const normalizedY = (2 * (distanceY - -maxDistanceY)) / (maxDistanceY - -maxDistanceY) - 1;
 
-        // set targetPoint to the normalized values
-        targetPoint.x = normalizedX * ICON_OFFSET; // multiply by ICON_OFFSET to make movement significant
-        targetPoint.y = normalizedY * ICON_OFFSET;
+            // set targetPoint to the normalized values
+            targetPoint.x = normalizedX * ICON_OFFSET; // multiply by ICON_OFFSET to make movement significant
+            targetPoint.y = normalizedY * ICON_OFFSET;
 
-        // scale up the child element for hover effect
-        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        child.style.scale = "1.15";
+            // scale up the child element for hover effect
+            const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
+            child.style.scale = "1.15";
 
-        // start animation loop if it is not running
-        if (!animationID) requestAnimationFrame(lerp);
-    };
+            // start animation loop if it is not running
+            if (!animationID) requestAnimationFrame(lerp);
+        },
+        [lerp]
+    );
 
-    const handleMouseLeave = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         // set targetPoint to 0 when mouse leaves the element
         targetPoint.x = 0;
         targetPoint.y = 0;
 
         // scale down the child element
-        const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-        child.style.scale = "1";
-    };
+        if (childRef.current) {
+            childRef.current.style.scale = "1";
+        }
+    }, []);
 
     // start animation loop
     // similar to Unity's Update() function
@@ -94,6 +104,7 @@ function MagneticButton() {
             onMouseMove={(e) => handleMouseMove(e)}
             onMouseLeave={(e) => handleMouseLeave(e)}>
             <div
+                ref={childRef}
                 className="p-3 rounded-full bg-black"
                 style={{
                     // apply transition only to scale property
