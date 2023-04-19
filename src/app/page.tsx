@@ -1,20 +1,107 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
+    const targetMousePosition = { x: 0, y: 0 };
+    const isHovering = useRef(false);
+
     return (
         <main className="flex flex-row gap-10 justify-center items-center mt-20">
-            <MagneticButton />
-            <MagneticButton />
+            <MouseFollower isHovering={isHovering} targetMousePosition={targetMousePosition} />
+            <MagneticButton isHovering={isHovering} targetMousePosition={targetMousePosition} />
         </main>
     );
 }
 
-function MagneticButton() {
-    const ICON_OFFSET = 50; // how much the icon moves when the mouse is hovering over it
+function MouseFollower({
+    isHovering,
+    targetMousePosition,
+}: {
+    isHovering: React.MutableRefObject<boolean>;
+    targetMousePosition: { x: number; y: number };
+}) {
+    const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
+    const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
+    // if animationID is null, then the animation loop is not running
+    let mouseAnimationID: number | null = null;
+    const mouseRef = useRef<HTMLDivElement>(null);
+
+    // applying new targetMousePosition to currentMousePosition
+    const mouseLerp = useCallback(() => {
+        const dx = targetMousePosition.x - currentMousePosition.x;
+        const dy = targetMousePosition.y - currentMousePosition.y;
+
+        // If animation is running and distance is less than 0.01, stop the animation
+        if (mouseAnimationID && Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
+            cancelAnimationFrame(mouseAnimationID);
+            mouseAnimationID = null;
+            return;
+        }
+
+        currentMousePosition.x += dx * MOUSE_SPEED;
+        currentMousePosition.y += dy * MOUSE_SPEED;
+
+        // set translateX and translateY CSS variables to the normalized values
+        if (mouseRef.current) {
+            mouseRef.current.style.setProperty("--mouseX", currentMousePosition.x + "px");
+            mouseRef.current.style.setProperty("--mouseY", currentMousePosition.y + "px");
+        }
+
+        // keep the animation loop running
+        mouseAnimationID = requestAnimationFrame(mouseLerp);
+    }, []);
+
+    // updating targetMousePosition and then calling mouseLerp
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        console.log("%cHovering?: " + isHovering.current, "color: red;");
+
+        // get the x and y coordinates of the mouse
+        const x = e.clientX;
+        const y = e.clientY;
+
+        // get height / 2 and width / 2 of the mouse follower circle
+        const middleX = mouseRef.current!.offsetWidth / 2 || 0;
+        const middleY = mouseRef.current!.offsetHeight / 2 || 0;
+
+        // get target position (no need to normalize)
+        if (!isHovering.current) {
+            targetMousePosition.x = x - middleX;
+            targetMousePosition.y = y - middleY;
+        }
+
+        // start animation loop if it is not running
+        if (!mouseAnimationID) requestAnimationFrame(mouseLerp);
+    }, []);
+
+    useEffect(() => {
+        document.addEventListener("mousemove", handleMouseMove);
+        return () => {
+            document.removeEventListener("mousemove", handleMouseMove);
+        };
+    }, []);
+
+    return (
+        <div
+            ref={mouseRef}
+            className={`absolute -z-50 h-3 w-3 rounded-full bg-white top-0 left-0 translate-x-[var(--mouseX)] translate-y-[var(--mouseY)]
+                        ${isHovering.current ? "scale-[5]" : "scale-[1]"}
+            `}
+        />
+    );
+}
+
+function MagneticButton({
+    isHovering,
+    targetMousePosition,
+}: {
+    isHovering: React.MutableRefObject<boolean>;
+    targetMousePosition: { x: number; y: number };
+}) {
+    const ICON_OFFSET = 20; // how much the icon moves when the mouse is hovering over it
     const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
+    const ICON_SPEED = 0.05; // how fast the icon moves
     const currentPoint = { x: 0, y: 0 };
     const targetPoint = { x: 0, y: 0 };
     // if animationID is null, then the animation loop is not running
@@ -27,16 +114,16 @@ function MagneticButton() {
         const dy = targetPoint.y - currentPoint.y;
 
         // If animation is running and distance is less than 0.05, stop the animation
-        if (animationID && Math.abs(dx) < 0.05 && Math.abs(dy) < 0.05) {
+        if (animationID && Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
             cancelAnimationFrame(animationID);
             animationID = null;
             return;
         }
 
-        currentPoint.x += dx * 0.05;
-        currentPoint.y += dy * 0.05;
+        currentPoint.x += dx * ICON_SPEED;
+        currentPoint.y += dy * ICON_SPEED;
 
-        console.log(`cp.x: ${currentPoint.x}, dx: ${dx} tp.x: ${targetPoint.x}`);
+        // console.log(`cp.x: ${currentPoint.x}, dx: ${dx} tp.x: ${targetPoint.x}`);
 
         // set translateX and translateY CSS variables to the normalized values
         if (childRef.current) {
@@ -74,8 +161,11 @@ function MagneticButton() {
             targetPoint.y = normalizedY * ICON_OFFSET;
 
             // scale up the child element for hover effect
-            const child = e.currentTarget.children[0] as HTMLDivElement; // typecast to HTMLDivElement to access style property
-            child.style.scale = ICON_SCALE;
+            if (childRef.current) childRef.current.style.scale = ICON_SCALE;
+
+            // set targetMousePosition to follow the element
+            targetMousePosition.x = middleX;
+            targetMousePosition.y = middleY;
 
             // start animation loop if it is not running
             if (!animationID) requestAnimationFrame(lerp);
@@ -89,21 +179,24 @@ function MagneticButton() {
         targetPoint.y = 0;
 
         // scale down the child element
-        if (childRef.current) {
-            childRef.current.style.scale = "1";
-        }
+        if (childRef.current) childRef.current.style.scale = "1";
+
+        isHovering.current = false;
     }, []);
 
     /*
         Start animation loop (similar to Unity's Update() function).
         Called every frame to update the position of the icon, non-blocking.
     */
-    requestAnimationFrame(lerp);
+    lerp();
 
     return (
         <button
             className="p-12 border-2 border-red-500/50 rounded-full"
             // make the icon move with the mouse (fancy magnet effect)
+            onMouseEnter={() => {
+                isHovering.current = true;
+            }}
             onMouseMove={(e) => handleMouseMove(e)}
             onMouseLeave={(e) => handleMouseLeave(e)}>
             <div

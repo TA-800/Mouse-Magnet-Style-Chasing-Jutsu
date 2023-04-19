@@ -4,6 +4,6 @@
 
 /* Create variable called "xloc" */
 :root {
-    --xloc: 0px;
-    --yloc: 0px;
+    --mouseX: 0px;
+    --mouseY: 0px;
 }
