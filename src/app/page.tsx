@@ -11,7 +11,17 @@ export default function Home() {
     return (
         <main className="flex flex-row gap-10 justify-center items-center mt-20">
             <MouseFollower isHovering={isHovering} targetMousePosition={targetMousePosition} mouseRef={mouseRef} />
-            <MagneticButton isHovering={isHovering} targetMousePosition={targetMousePosition} mouseRef={mouseRef} />
+            <MagneticButton isHovering={isHovering} targetMousePosition={targetMousePosition} mouseRef={mouseRef}>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-6 h-6">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </MagneticButton>
         </main>
     );
 }
@@ -107,10 +117,12 @@ function MagneticButton({
     isHovering,
     targetMousePosition,
     mouseRef,
+    children,
 }: {
     isHovering: React.MutableRefObject<boolean>;
     targetMousePosition: { x: number; y: number };
     mouseRef: React.MutableRefObject<HTMLDivElement | null>;
+    children: React.ReactNode;
 }) {
     const ICON_OFFSET = 20; // how much the icon moves when the mouse is hovering over it
     const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
@@ -225,15 +237,7 @@ function MagneticButton({
                     transitionDuration: "0.25s",
                     transitionTimingFunction: "ease-out",
                 }}>
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={1.5}
-                    stroke="currentColor"
-                    className="w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
+                {children}
             </div>
         </button>
     );
