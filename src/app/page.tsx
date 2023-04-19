@@ -23,7 +23,8 @@ function MouseFollower({
     targetMousePosition: { x: number; y: number };
 }) {
     const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
-    const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
+    const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y }; // {x: 0, y: 0};
+    const [isHoveringState, setIsHoveringState] = useState(isHovering.current);
     // if animationID is null, then the animation loop is not running
     let mouseAnimationID: number | null = null;
     const mouseRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,6 @@ function MouseFollower({
 
     // updating targetMousePosition and then calling mouseLerp
     const handleMouseMove = useCallback((e: MouseEvent) => {
-        console.log("%cHovering?: " + isHovering.current, "color: red;");
-
         // get the x and y coordinates of the mouse
         const x = e.clientX;
         const y = e.clientY;
@@ -67,8 +66,12 @@ function MouseFollower({
 
         // get target position (no need to normalize)
         if (!isHovering.current) {
+            // only update targetMousePosition if the mouse is not hovering over a magnetic button
             targetMousePosition.x = x - middleX;
             targetMousePosition.y = y - middleY;
+            setIsHoveringState(false); // React will not re-render if the state is the same
+        } else {
+            setIsHoveringState(true);
         }
 
         // start animation loop if it is not running
@@ -86,7 +89,7 @@ function MouseFollower({
         <div
             ref={mouseRef}
             className={`absolute -z-50 h-3 w-3 rounded-full bg-white top-0 left-0 translate-x-[var(--mouseX)] translate-y-[var(--mouseY)]
-                        ${isHovering.current ? "scale-[5]" : "scale-[1]"}
+                        ${isHoveringState ? "scale-[5]" : "scale-[1]"}
             `}
         />
     );
@@ -109,6 +112,7 @@ function MagneticButton({
     const childRef = useRef<HTMLDivElement>(null);
 
     // useCallback to prevent unnecessary redefinition of lerp function (prevents glitchy animation on state change)
+    // applying new targetPoint to currentPoint
     const lerp = useCallback(() => {
         const dx = targetPoint.x - currentPoint.x;
         const dy = targetPoint.y - currentPoint.y;
@@ -123,8 +127,6 @@ function MagneticButton({
         currentPoint.x += dx * ICON_SPEED;
         currentPoint.y += dy * ICON_SPEED;
 
-        // console.log(`cp.x: ${currentPoint.x}, dx: ${dx} tp.x: ${targetPoint.x}`);
-
         // set translateX and translateY CSS variables to the normalized values
         if (childRef.current) {
             childRef.current.style.setProperty("transform", `translate(${currentPoint.x}px, ${currentPoint.y}px)`);
@@ -134,6 +136,7 @@ function MagneticButton({
         animationID = requestAnimationFrame(lerp);
     }, []);
 
+    // updating targetPoint and then calling lerp
     const handleMouseMove = useCallback(
         (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
             // get the x and y coordinates of the mouse
@@ -164,8 +167,8 @@ function MagneticButton({
             if (childRef.current) childRef.current.style.scale = ICON_SCALE;
 
             // set targetMousePosition to follow the element
-            targetMousePosition.x = middleX;
-            targetMousePosition.y = middleY;
+            targetMousePosition.x = targetPoint.x + middleX;
+            targetMousePosition.y = targetPoint.y + middleY;
 
             // start animation loop if it is not running
             if (!animationID) requestAnimationFrame(lerp);
