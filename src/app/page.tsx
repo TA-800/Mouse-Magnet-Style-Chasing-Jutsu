@@ -7,9 +7,12 @@ import { MouseContext, MouseProvider } from "./context/MouseContext";
 export default function Home() {
     return (
         <MouseProvider>
-            <main className="flex flex-row gap-10 justify-center items-center mt-20">
+            <main className="flex flex-col gap-10 justify-center items-center mt-20">
                 <MouseFollower />
-                <MagneticButton>
+                <MagneticButton
+                    onClick={() => {
+                        console.log("clicked");
+                    }}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
@@ -20,12 +23,18 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </MagneticButton>
+                <MagneticButton
+                    onClick={() => {
+                        console.log("clicked");
+                    }}>
+                    RECTANGLE
+                </MagneticButton>
             </main>
         </MouseProvider>
     );
 }
 
-const MouseFollower = () => {
+export function MouseFollower() {
     const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
     const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext);
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y }; // {x: 0, y: 0};
@@ -91,17 +100,17 @@ const MouseFollower = () => {
     return (
         <div
             ref={mouseRef}
-            className={`absolute -z-50 h-3 w-3 rounded-full bg-white top-0 left-0 translate-x-[var(--mouseX)] translate-y-[var(--mouseY)]
-                        ${isHoveringState ? `scale-[5]` : "scale-[1]"}
-            `}
+            className={`absolute -z-50 h-[var(--mouseHeight)] w-[var(--mouseWidth)] rounded-full bg-white top-0 left-0 translate-x-[var(--mouseX)] translate-y-[var(--mouseY)]
+                        `}
             style={{
-                transition: "scale 1s ease-in-out",
+                // add transition to only height and width
+                transition: "height 0.2s, width 0.2s",
             }}
         />
     );
-};
+}
 
-function MagneticButton({ children }: { children: React.ReactNode }) {
+export function MagneticButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
     const ICON_OFFSET = 20; // how much the icon moves when the mouse is hovering over it
     const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
     const ICON_SPEED = 0.1; // how fast the icon moves
@@ -187,6 +196,10 @@ function MagneticButton({ children }: { children: React.ReactNode }) {
             childRef.current.style.background = "rgba(0, 0, 0, 0)";
         }
 
+        // reset height and width of mouse follower to 0.75rem
+        mouseRef.current!.style.setProperty("--mouseHeight", "0.75rem");
+        mouseRef.current!.style.setProperty("--mouseWidth", "0.75rem");
+
         isHovering.current = false;
     }, []);
 
@@ -203,9 +216,13 @@ function MagneticButton({ children }: { children: React.ReactNode }) {
             onMouseEnter={() => {
                 isHovering.current = true;
                 childRef.current!.style.background = "rgba(0, 0, 0, 1)";
+                // change height and width of mouse follower to match the icon
+                mouseRef.current!.style.setProperty("--mouseHeight", `${childRef.current!.offsetHeight * 1.25}px`);
+                mouseRef.current!.style.setProperty("--mouseWidth", `${childRef.current!.offsetWidth * 1.25}px`);
             }}
             onMouseMove={(e) => handleMouseMove(e)}
-            onMouseLeave={(e) => handleMouseLeave(e)}>
+            onMouseLeave={(e) => handleMouseLeave(e)}
+            onClick={onClick}>
             <div
                 ref={childRef}
                 className="p-3 rounded-full"
