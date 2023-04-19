@@ -38,11 +38,13 @@ export function MouseFollower() {
     const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
     const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext);
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y }; // {x: 0, y: 0};
-    const [isHoveringState, setIsHoveringState] = useState(isHovering.current);
+    // const [isHoveringState, setIsHoveringState] = useState(isHovering.current);
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
 
     // applying new targetMousePosition to currentMousePosition
     const mouseLerp = useCallback(() => {
+        // console.log("%cRunning mouse lerp", "color: blue; font-weight: bold;");
+
         const dx = targetMousePosition.x - currentMousePosition.x;
         const dy = targetMousePosition.y - currentMousePosition.y;
 
@@ -73,18 +75,16 @@ export function MouseFollower() {
         const y = e.clientY;
 
         // get height / 2 and width / 2 of the mouse follower circle
-        const middleX = mouseRef.current!.offsetWidth / 2 || 0;
-        const middleY = mouseRef.current!.offsetHeight / 2 || 0;
+        const middleX = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--mouseWidth")) / 2;
+        const middleY = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--mouseHeight")) / 2;
+        // get width and height from CSS variables because transition affects offsetWidth and offsetHeight (CSS variables will instantly update values between transitions)
 
         // get target position (no need to normalize)
         if (!isHovering.current) {
             // only update targetMousePosition if the mouse is not hovering over a magnetic button
             targetMousePosition.x = x - middleX;
             targetMousePosition.y = y - middleY;
-            setIsHoveringState(false); // React will not re-render if the state is the same
-        } else {
-            setIsHoveringState(true);
-        }
+        } // else the targetMousePosition will be updated by the magnetic button
 
         // start animation loop if it is not running
         if (!mouseAnimationID) requestAnimationFrame(mouseLerp);
@@ -111,7 +111,7 @@ export function MouseFollower() {
 }
 
 export function MagneticButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-    const ICON_OFFSET = 20; // how much the icon moves when the mouse is hovering over it
+    const ICON_OFFSET = 10; // how much the icon moves when the mouse is hovering over it
     const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
     const ICON_SPEED = 0.1; // how fast the icon moves
     const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext);
@@ -123,6 +123,8 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
     // useCallback to prevent unnecessary redefinition of lerp function (prevents glitchy animation on state change)
     // applying new targetPoint to currentPoint
     const lerp = useCallback(() => {
+        // console.log("%cRunning button lerp", "color: green; font-weight: bold;");
+
         const dx = targetPoint.x - currentPoint.x;
         const dy = targetPoint.y - currentPoint.y;
 
@@ -175,9 +177,14 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
             // scale up the child element for hover effect
             if (childRef.current) childRef.current.style.scale = ICON_SCALE;
 
+            // get width and height of mouse follower from the CSS variables --mouseHeight and --mouseWidth (they're in pixels)
+            const newMouseHeight = parseFloat(getComputedStyle(mouseRef.current!).getPropertyValue("--mouseHeight"));
+            const newMouseWidth = parseFloat(getComputedStyle(mouseRef.current!).getPropertyValue("--mouseWidth"));
+            // get from CSS variables instead of offsetWidth and height because transition affects them
+
             // set targetMousePosition to follow the element
-            targetMousePosition.x = targetPoint.x + middleX - (mouseRef.current!.offsetWidth / 2 || 0);
-            targetMousePosition.y = targetPoint.y + middleY - (mouseRef.current!.offsetHeight / 2 || 0);
+            targetMousePosition.x = targetPoint.x + middleX - newMouseWidth / 2;
+            targetMousePosition.y = targetPoint.y + middleY - newMouseHeight / 2;
 
             // start animation loop if it is not running
             if (!animationID) requestAnimationFrame(lerp);
@@ -197,8 +204,8 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
         }
 
         // reset height and width of mouse follower to 0.75rem
-        mouseRef.current!.style.setProperty("--mouseHeight", "0.75rem");
-        mouseRef.current!.style.setProperty("--mouseWidth", "0.75rem");
+        mouseRef.current!.style.setProperty("--mouseHeight", "12px");
+        mouseRef.current!.style.setProperty("--mouseWidth", "12px");
 
         isHovering.current = false;
     }, []);
@@ -211,7 +218,7 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
 
     return (
         <button
-            className="p-12 border-0 border-red-500/50 rounded-full"
+            className="p-12 border-2 border-red-500/50 rounded-full"
             // make the icon move with the mouse (fancy magnet effect)
             onMouseEnter={() => {
                 isHovering.current = true;
