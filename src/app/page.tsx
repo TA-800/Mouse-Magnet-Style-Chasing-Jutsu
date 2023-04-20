@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useContext } from "react";
+import { useCallback, useEffect, useRef, useContext } from "react";
 import { MouseContext, MouseProvider } from "./context/MouseContext";
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
+    // Get context in parent component to share consistent values between components (even dynamically rendered ones)
+    const context = useContext(MouseContext);
+
     return (
-        <MouseProvider>
+        <MouseProvider value={context}>
             <main className="flex flex-col gap-10 justify-center items-center mt-20">
                 <MouseFollower />
                 <MagneticButton
@@ -23,12 +26,6 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </MagneticButton>
-                <MagneticButton
-                    onClick={() => {
-                        console.log("clicked");
-                    }}>
-                    RECTANGLE
-                </MagneticButton>
             </main>
         </MouseProvider>
     );
@@ -36,15 +33,12 @@ export default function Home() {
 
 export function MouseFollower() {
     const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
-    const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext);
-    const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y }; // {x: 0, y: 0};
-    // const [isHoveringState, setIsHoveringState] = useState(isHovering.current);
+    const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext); // consume context from provider that's wrapping the parent component
+    const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
 
     // applying new targetMousePosition to currentMousePosition
     const mouseLerp = useCallback(() => {
-        // console.log("%cRunning mouse lerp", "color: blue; font-weight: bold;");
-
         const dx = targetMousePosition.x - currentMousePosition.x;
         const dy = targetMousePosition.y - currentMousePosition.y;
 
@@ -57,6 +51,10 @@ export function MouseFollower() {
 
         currentMousePosition.x += dx * MOUSE_SPEED;
         currentMousePosition.y += dy * MOUSE_SPEED;
+
+        // set CMP to 0 if NaN (bug that happens when mouse moving before page loads)
+        currentMousePosition.x = isNaN(currentMousePosition.x) ? 0 : currentMousePosition.x;
+        currentMousePosition.y = isNaN(currentMousePosition.y) ? 0 : currentMousePosition.y;
 
         // set translateX and translateY CSS variables to the normalized values
         if (mouseRef.current) {
@@ -114,7 +112,7 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
     const ICON_OFFSET = 10; // how much the icon moves when the mouse is hovering over it
     const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
     const ICON_SPEED = 0.1; // how fast the icon moves
-    const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext);
+    const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext); // consume context from provider that's wrapping the parent component
     const currentPoint = { x: 0, y: 0 };
     const targetPoint = { x: 0, y: 0 };
     let animationID: number | null = null; // if animationID is null, then the animation loop is not running

@@ -6,22 +6,19 @@ export interface MouseContextType {
     mouseRef: React.MutableRefObject<HTMLDivElement | null>;
 }
 
-// default value for context
+// default value for context (if no provider is used)
 export const MouseContext = createContext<MouseContextType>({
     isHovering: { current: false },
     targetMousePosition: { x: 0, y: 0 },
     mouseRef: { current: null },
 });
 
-export const MouseProvider = ({ children }: { children: React.ReactNode }) => {
-    const targetMousePosition = { x: 0, y: 0 };
-    const isHovering = useRef(false);
-    const mouseRef = useRef<HTMLDivElement>(null);
-
+// provider component (that wraps children and will provide context with updated values)
+export const MouseProvider = ({ children, value }: { children: React.ReactNode; value: MouseContextType }) => {
     const context = {
-        isHovering,
-        targetMousePosition,
-        mouseRef,
+        isHovering: value.isHovering || { current: false },
+        targetMousePosition: value.targetMousePosition || { x: 0, y: 0 },
+        mouseRef: value.mouseRef || { current: null },
     };
 
     return <MouseContext.Provider value={context}>{children}</MouseContext.Provider>;
