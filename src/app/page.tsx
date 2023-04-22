@@ -1,20 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useContext } from "react";
-import { MouseContext, MouseProvider } from "./context/MouseContext";
+import { useCallback, useEffect, useRef, useContext, useState, forwardRef, useImperativeHandle } from "react";
+import { MouseContext, MouseContextType, MouseProvider } from "./context/MouseContext";
+
+// Create type for ref that will be used to pull out mouseLerp function
+interface MouseFollowerRefType {
+    mouseLerp: (e: MouseEvent) => void;
+}
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
     // Get context in parent component to share consistent values between components (even dynamically rendered ones)
     const context = useContext(MouseContext);
+    const mouseRefMethod = useRef<MouseFollowerRefType>(null);
+    const [render, setRender] = useState(false);
 
     return (
         <MouseProvider value={context}>
             <main className="flex flex-col gap-10 justify-center items-center mt-20">
-                <MouseFollower />
+                <MouseFollower speed={0.1} ref={mouseRefMethod} />
                 <MagneticButton
+                    offset={20}
+                    scale="1.2"
+                    speed={0.1}
                     onClick={() => {
-                        console.log("clicked");
+                        setRender(!render);
                     }}>
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -26,16 +36,30 @@ export default function Home() {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </MagneticButton>
+                {render && (
+                    <MagneticButton
+                        onClick={(e) => {
+                            forceResetMouse(context, mouseRefMethod, { x: e.clientX, y: e.clientY });
+                            setRender(!render);
+                        }}>
+                        RECTANGLE
+                    </MagneticButton>
+                )}
             </main>
         </MouseProvider>
     );
 }
 
-export function MouseFollower() {
-    const MOUSE_SPEED = 0.1; // how fast the circle follows the mouse
+const MouseFollower = forwardRef((props: { speed: number }, ref: React.Ref<MouseFollowerRefType>) => {
+    const { speed } = props;
     const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext); // consume context from provider that's wrapping the parent component
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
+
+    // return mouseLerp through useImperativeHandle so that it can be called from other components
+    useImperativeHandle(ref, () => ({
+        mouseLerp,
+    }));
 
     // applying new targetMousePosition to currentMousePosition
     const mouseLerp = useCallback(() => {
@@ -49,8 +73,8 @@ export function MouseFollower() {
             return;
         }
 
-        currentMousePosition.x += dx * MOUSE_SPEED;
-        currentMousePosition.y += dy * MOUSE_SPEED;
+        currentMousePosition.x += dx * speed;
+        currentMousePosition.y += dy * speed;
 
         // set CMP to 0 if NaN (bug that happens when mouse moving before page loads)
         currentMousePosition.x = isNaN(currentMousePosition.x) ? 0 : currentMousePosition.x;
@@ -102,16 +126,53 @@ export function MouseFollower() {
                         `}
             style={{
                 // add transition to only height and width
-                transition: "height 0.2s, width 0.2s",
+                transition: "height 0.25s, width 0.25s",
             }}
         />
     );
+});
+/*
+    Call this function to force the mouse follower to reset to ordinary mouse-following behavior.
+    TODO: mouseLerp needs to be called when the mouse position is reset.
+*/
+function forceResetMouse(
+    context: MouseContextType,
+    mouseRefMethod: React.Ref<MouseFollowerRefType>,
+    newPosition?: { x: number; y: number }
+) {
+    // reset mouse follower to normal size
+    context.mouseRef.current!.style.setProperty("--mouseHeight", "12px");
+    context.mouseRef.current!.style.setProperty("--mouseWidth", "12px");
+
+    // if newPosition is defined, then set the targetMousePosition to the new position
+    if (newPosition) {
+        context.targetMousePosition.x = newPosition.x;
+        context.targetMousePosition.y = newPosition.y;
+    }
+
+    // set isHovering to false
+    context.isHovering.current = false;
+
+    // @ts-ignore
+    mouseRefMethod!.current.mouseLerp();
+    // call mouseLerp to reset the mouse position
 }
 
-export function MagneticButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-    const ICON_OFFSET = 10; // how much the icon moves when the mouse is hovering over it
-    const ICON_SCALE = "1.15"; // how much the icon scales when the mouse is hovering over it
-    const ICON_SPEED = 0.1; // how fast the icon moves
+export function MagneticButton({
+    offset = 10,
+    scale = "1.15",
+    mouse_scale = 1.1,
+    speed = 0.1,
+    onClick,
+    children,
+}: {
+    offset?: number;
+    scale?: string;
+    mouse_scale?: number;
+    speed?: number;
+    onClick: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+    children: React.ReactNode;
+}) {
     const { isHovering, targetMousePosition, mouseRef } = useContext(MouseContext); // consume context from provider that's wrapping the parent component
     const currentPoint = { x: 0, y: 0 };
     const targetPoint = { x: 0, y: 0 };
@@ -133,8 +194,8 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
             return;
         }
 
-        currentPoint.x += dx * ICON_SPEED;
-        currentPoint.y += dy * ICON_SPEED;
+        currentPoint.x += dx * speed;
+        currentPoint.y += dy * speed;
 
         // set translateX and translateY CSS variables to the normalized values
         if (childRef.current) {
@@ -169,11 +230,11 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
             const normalizedY = (2 * (distanceY - -maxDistanceY)) / (maxDistanceY - -maxDistanceY) - 1;
 
             // set targetPoint to the normalized values
-            targetPoint.x = normalizedX * ICON_OFFSET; // multiply by ICON_OFFSET to make movement significant
-            targetPoint.y = normalizedY * ICON_OFFSET;
+            targetPoint.x = normalizedX * offset; // multiply by offset to make movement significant
+            targetPoint.y = normalizedY * offset;
 
             // scale up the child element for hover effect
-            if (childRef.current) childRef.current.style.scale = ICON_SCALE;
+            if (childRef.current) childRef.current.style.scale = scale;
 
             // get width and height of mouse follower from the CSS variables --mouseHeight and --mouseWidth (they're in pixels)
             const newMouseHeight = parseFloat(getComputedStyle(mouseRef.current!).getPropertyValue("--mouseHeight"));
@@ -185,12 +246,13 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
             targetMousePosition.y = targetPoint.y + middleY - newMouseHeight / 2;
 
             // start animation loop if it is not running
+            // similar to Unity's Update() function
             if (!animationID) requestAnimationFrame(lerp);
         },
         [lerp]
     );
 
-    const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+    const handleMouseLeave = useCallback(() => {
         // set targetPoint to 0 when mouse leaves the element
         targetPoint.x = 0;
         targetPoint.y = 0;
@@ -208,12 +270,6 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
         isHovering.current = false;
     }, []);
 
-    /*
-        Start animation loop (similar to Unity's Update() function).
-        Called every frame to update the position of the icon, non-blocking.
-    */
-    lerp();
-
     return (
         <button
             className="p-12 border-2 border-red-500/50 rounded-full"
@@ -222,12 +278,18 @@ export function MagneticButton({ onClick, children }: { onClick: () => void; chi
                 isHovering.current = true;
                 childRef.current!.style.background = "rgba(0, 0, 0, 1)";
                 // change height and width of mouse follower to match the icon
-                mouseRef.current!.style.setProperty("--mouseHeight", `${childRef.current!.offsetHeight * 1.25}px`);
-                mouseRef.current!.style.setProperty("--mouseWidth", `${childRef.current!.offsetWidth * 1.25}px`);
+                mouseRef.current!.style.setProperty(
+                    "--mouseHeight",
+                    `${childRef.current!.offsetHeight * parseFloat(scale) * mouse_scale}px`
+                );
+                mouseRef.current!.style.setProperty(
+                    "--mouseWidth",
+                    `${childRef.current!.offsetWidth * parseFloat(scale) * mouse_scale}px`
+                );
             }}
             onMouseMove={(e) => handleMouseMove(e)}
-            onMouseLeave={(e) => handleMouseLeave(e)}
-            onClick={onClick}>
+            onMouseLeave={handleMouseLeave}
+            onClick={(e) => onClick(e)}>
             <div
                 ref={childRef}
                 className="p-3 rounded-full"
