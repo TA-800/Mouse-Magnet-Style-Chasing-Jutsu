@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useContext, useState, forwardRef, useIm
 import { MouseContext, MouseContextType, MouseProvider } from "./context/MouseContext";
 
 // Create type for ref that will be used to pull out mouseLerp function
-interface MouseFollowerRefType {
-    mouseLerp: (e: MouseEvent) => void;
-}
+type MouseFollowerRefType = {
+    mouseLerp: () => void;
+};
 
 // reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
 export default function Home() {
@@ -137,7 +137,7 @@ const MouseFollower = forwardRef((props: { speed: number }, ref: React.Ref<Mouse
 */
 function forceResetMouse(
     context: MouseContextType,
-    mouseRefMethod: React.Ref<MouseFollowerRefType>,
+    mouseRefMethod: React.RefObject<MouseFollowerRefType>,
     newPosition?: { x: number; y: number }
 ) {
     // reset mouse follower to normal size
@@ -153,9 +153,8 @@ function forceResetMouse(
     // set isHovering to false
     context.isHovering.current = false;
 
-    // @ts-ignore
-    mouseRefMethod!.current.mouseLerp();
     // call mouseLerp to reset the mouse position
+    mouseRefMethod.current!.mouseLerp();
 }
 
 export function MagneticButton({
