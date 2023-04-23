@@ -10,3 +10,15 @@
     --mouseHeight: 12px;
     --mouseWidth: 12px;
 }
+
+/* Thin scrollbar for every scrollable */
+* {
+    /* Reference: https://css-tricks.com/almanac/properties/s/scrollbar-gutter/ */
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff #000000;
+}
+body {
+    background: rgb(0, 3, 34);
+    background: linear-gradient(90deg, rgba(0, 3, 34, 1) 100%, rgba(0, 0, 0, 1) 0%);
+}
