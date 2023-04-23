@@ -55,7 +55,7 @@ export default function Home() {
                         innerPadding={6}
                         outerPadding={12}
                         onClickFn={(e) => {
-                            forceResetMouse(mC, { x: e.clientX, y: e.clientY });
+                            forceResetMouse(mC, e);
                             setHide(true);
                         }}>
                         HIDEME
