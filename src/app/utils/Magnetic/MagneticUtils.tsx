@@ -94,7 +94,7 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
 
 /**
  * Force the mouse follower to reset to ordinary mouse-following behavior.
- * Useful for when the mouse is hovering over a magnetic button that is about to be removed from the DOM.
+ * Useful for when the mouse is hovering over a magnetic component that is about to be unmounted.
  */
 export function forceResetMouse(
     context: MouseContextType,
