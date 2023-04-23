@@ -7,9 +7,9 @@ export default function Contact() {
             <p>Hey there.</p>
             <br />
             <p>
-                If you've made it this far down my website, it probably means you're looking for a way to get in touch with me.
-                And let me tell you, that's a fantastic idea! You never know what kind of exciting opportunities could come out of
-                a good old-fashioned conversation.
+                If you&apos;ve made it this far down my website, it probably means you&apos;re looking for a way to get in touch
+                with me. And let me tell you, that&apos;s a fantastic idea! You never know what kind of exciting opportunities
+                could come out of a good old-fashioned conversation.
             </p>
             <br />
             <p>So, without further ado, here are some ways to reach me:</p>
@@ -22,7 +22,7 @@ export default function Contact() {
                     </li>
                     <li>
                         <strong>Morse code</strong>
-                        <p className="opacity-75">Tap out your message on a telegraph and hope I'm listening.</p>
+                        <p className="opacity-75">Tap out your message on a telegraph and hope I&apos;m listening.</p>
                     </li>
                     <li>
                         <strong>Smoke signals</strong>
@@ -33,9 +33,9 @@ export default function Contact() {
             <br />
 
             <p>
-                And that's it! I look forward to hearing from you, no matter what method you choose to contact me. Just please, no
-                carrier llamas. I've had some bad experiences in the past. If you any suggestions for other ways to contact me,
-                keep them to yourself. I don't want to hear them.
+                And that&apos;s it! I look forward to hearing from you, no matter what method you choose to contact me. Just
+                please, no carrier llamas. I&apos;ve had some bad experiences in the past. If you any suggestions for other ways
+                to contact me, keep them to yourself. I don&apos;t want to hear them.
             </p>
             <br />
 

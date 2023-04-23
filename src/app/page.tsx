@@ -32,7 +32,7 @@ export default function Home() {
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ac nulla eu velit accumsan bibendum sed eu
                     sapien. Fusce commodo ipsum eu lacus consequat, ac rutrum magna tincidunt. Sed in bibendum nisl. Sed commodo,
                     sapien quis vestibulum interdum, enim sapien ultrices massa, id imperdiet ipsum metus vel lorem. Donec
-                    rhoncus. Infinity War isn't a movie, it's a documentary. Why else would Thanos look so real?
+                    rhoncus. Infinity War isn&apos;t a movie, it&apos;s a documentary. Why else would Thanos look so real?
                 </p>
                 <br />
                 <div className="flex flex-row items-center gap-4">
