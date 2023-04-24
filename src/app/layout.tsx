@@ -11,7 +11,6 @@ const inter = Inter({ subsets: ["latin"] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     const context = useContext(MouseContext);
-
     const router = useRouter();
 
     return (
@@ -27,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <Navbar>
                         <MouseFollower speed={0.1} />
                         <MagneticButton
+                            speed={0.1}
                             innerPadding={12}
                             outerPadding={48}
                             offset={25}
