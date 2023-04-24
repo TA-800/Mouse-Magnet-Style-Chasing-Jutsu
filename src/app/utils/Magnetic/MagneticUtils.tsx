@@ -127,6 +127,7 @@ export function MagneticButton({
     scale = "1.15",
     mouse_scale = 1.1,
     speed = 0.1,
+    click_scale_down = "0.95",
     onClickFn,
     children,
 }: {
@@ -136,6 +137,7 @@ export function MagneticButton({
     scale?: string;
     mouse_scale?: number;
     speed?: number;
+    click_scale_down?: string;
     onClickFn: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
     children: React.ReactNode;
 }) {
@@ -226,6 +228,9 @@ export function MagneticButton({
         if (childRef.current) {
             childRef.current.style.scale = "1";
             childRef.current.style.background = "rgba(0, 0, 0, 0)";
+            // Also invalidate all CSS properties applied by vfxMouseDown (because mouse can be dragged away from button so vfxMouseUp won't activate)
+            childRef.current.style.color = "rgba(255, 255, 255, 1)";
+            childRef.current.style.transitionDuration = "0.2s";
         }
 
         // reset height and width of mouse follower to 0.75rem
@@ -258,6 +263,28 @@ export function MagneticButton({
         if (!animationID) handleMouseMove(e);
     }, []);
 
+    const vfxMouseDown = useCallback(() => {
+        // scale down the child element for click effect
+        if (childRef.current) {
+            // temporarily speed up the transition
+            childRef.current.style.transitionDuration = "0s";
+            childRef.current.style.scale = click_scale_down;
+            childRef.current.style.backgroundColor = "rgba(255, 255, 255, 1)";
+            childRef.current.style.color = "rgba(0, 0, 0, 1)";
+        }
+    }, []);
+
+    const vfxMouseUp = useCallback(() => {
+        // scale up the child element for click effect
+        if (childRef.current) {
+            // reset transition duration
+            childRef.current.style.transitionDuration = "0.2s";
+            childRef.current.style.scale = scale;
+            childRef.current.style.backgroundColor = "rgba(0, 0, 0, 1)";
+            childRef.current.style.color = "rgba(255, 255, 255, 1)";
+        }
+    }, []);
+
     return (
         <button
             className="border-0 border-red-500/50"
@@ -270,6 +297,8 @@ export function MagneticButton({
             onMouseEnter={handleMouseEnter}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            onMouseDown={() => vfxMouseDown()}
+            onMouseUp={() => vfxMouseUp()}
             onClick={(e) => onClickFn(e)}>
             <div
                 ref={childRef}
@@ -278,7 +307,7 @@ export function MagneticButton({
                     borderRadius: "9999px",
                     // apply transition only to scale and background properties
                     transitionProperty: "scale, background",
-                    transitionDuration: "0.25s",
+                    transitionDuration: "0.2s",
                     transitionTimingFunction: "ease-out",
                     zIndex: 51,
                 }}>
