@@ -1,16 +1,17 @@
-import { useCallback, useEffect, useRef, useContext, useImperativeHandle } from "react";
+import { useCallback, useEffect, useRef, useContext, useImperativeHandle, useState } from "react";
 import { MouseContext, MouseContextType } from "../../context/MouseContext";
 
-// Create type for ref that will be used to pull out mouseLerp function
+/** Type for the mouseMethodRef that will be used to extract the position-updater method for the mouse-follower */
 export type MouseMethodRefType = {
     handleMouseMove: (e: MouseEvent) => void;
 };
 
 /**
  * Mouse follower component that follows the mouse around the page.
+ * Reference: https://frontendmasters.com/courses/css-animations/lerp-technique/
  */
 const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
-    const { isHovering, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
+    const { targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
 
@@ -47,7 +48,7 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
     // Updating targetMousePosition and then calling mouseLerp
     const handleMouseMove = useCallback((e: MouseEvent) => {
         // only calculate all this if the mouse is not hovering over a magnetic button
-        if (!isHovering.current) {
+        if (targetMagnElement.current === null) {
             // Get the x and y coordinates of the mouse
             const x = e.clientX;
             const y = e.clientY;
@@ -95,23 +96,13 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
  * Force the mouse follower to reset to ordinary mouse-following behavior.
  * Useful for when the mouse is hovering over a magnetic component that is about to be unmounted.
  */
-export function forceResetMouse(
-    context: MouseContextType,
-    e: React.MouseEvent<HTMLButtonElement, MouseEvent>,
-    newPosition?: { x: number; y: number }
-) {
+export function forceResetMouse(context: MouseContextType, e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     // Reset mouse follower to normal size
     context.mouseRef.current!.style.setProperty("--mouseHeight", "12px");
     context.mouseRef.current!.style.setProperty("--mouseWidth", "12px");
 
-    // if newPosition is defined, then set the targetMousePosition to the new position
-    if (newPosition) {
-        context.targetMousePosition.x = newPosition.x;
-        context.targetMousePosition.y = newPosition.y;
-    }
-
     // Set isHovering to false
-    context.isHovering.current = false;
+    context.targetMagnElement.current = null;
 
     // call mouseLerp to reset the mouse position
     context.mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
@@ -120,6 +111,7 @@ export function forceResetMouse(
  * Wrapper function for a Magnetic component. This will decorate the child(ren) with mouse following behavior.
  */
 export function MagneticButton({
+    id,
     outerPadding = 48,
     innerPadding = 12,
     offset = 10,
@@ -129,6 +121,7 @@ export function MagneticButton({
     onClickFn,
     children,
 }: {
+    id: string;
     outerPadding?: number;
     innerPadding?: number;
     offset?: number;
@@ -138,11 +131,12 @@ export function MagneticButton({
     onClickFn: (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
     children: React.ReactNode;
 }) {
-    const { isHovering, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
+    const { targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
     const currentPoint = { x: 0, y: 0 };
     const targetPoint = { x: 0, y: 0 };
     let animationID: number | null = null; // if animationID is null, then the animation loop is not running
     const childRef = useRef<HTMLDivElement>(null);
+    let scrollPosition = { x: 0, y: 0 };
 
     // UseCallback to prevent unnecessary redefinition of lerp function (prevents glitchy animation on state change)
     // Applying new targetPoint to currentPoint
@@ -154,6 +148,8 @@ export function MagneticButton({
         if (animationID && Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
             cancelAnimationFrame(animationID);
             animationID = null;
+            // Store current mouse position in scrollPosition when animation stops
+            scrollPosition = { x: currentPoint.x, y: currentPoint.y };
             return;
         }
 
@@ -187,6 +183,7 @@ export function MagneticButton({
             // Get largest possible distance
             const maxDistanceX = e.currentTarget.offsetWidth / 2;
             const maxDistanceY = e.currentTarget.offsetHeight / 2;
+            // Note: e.currentTarget and childRef.current.parentElement are the same.
 
             // normalize between -1 and 1 using the following formula: [2 * (distance - min) / (max - min)] - 1
             const normalizedX = (2 * (distanceX - -maxDistanceX)) / (maxDistanceX - -maxDistanceX) - 1;
@@ -196,13 +193,8 @@ export function MagneticButton({
             targetPoint.x = normalizedX * offset; // Multiply by offset to make movement significant
             targetPoint.y = normalizedY * offset;
 
-            // Scale button when mouse is hovering over it for effect (breaks centering)
-            // if (childRef.current) childRef.current.style.scale = scale;
-
-            /**
-             * Get width and height of mouse follower from the CSS variables --mouseHeight and --mouseWidth (they're in pixels)
-             * Get from CSS variables instead of using mouseRef because transition makes it difficult to get the final dimensions until it ends.
-             */
+            // Get width and height of mouse follower from the CSS variables --mouseHeight and --mouseWidth (they're in pixels)
+            // Get from CSS variables instead of using mouseRef because transition makes it difficult to get the final dimensions until it ends.
             const newMouseHeight = parseFloat(getComputedStyle(mouseRef.current!).getPropertyValue("--mouseHeight"));
             const newMouseWidth = parseFloat(getComputedStyle(mouseRef.current!).getPropertyValue("--mouseWidth"));
 
@@ -217,6 +209,8 @@ export function MagneticButton({
     );
 
     const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        targetMagnElement.current = null;
+
         // Set targetPoint to 0 when mouse leaves the element
         targetPoint.x = 0;
         targetPoint.y = 0;
@@ -234,15 +228,13 @@ export function MagneticButton({
         mouseRef.current!.style.setProperty("--mouseHeight", "12px");
         mouseRef.current!.style.setProperty("--mouseWidth", "12px");
 
-        isHovering.current = false;
-
         // Run animation loops if not running (could happen if button was scrolled away from instead of hovered)
         mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
         if (!animationID) requestAnimationFrame(lerp);
     }, []);
 
     const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-        isHovering.current = true;
+        targetMagnElement.current = e.currentTarget;
         childRef.current!.style.background = "rgba(0, 0, 0, 1)";
 
         // change height and width of mouse follower to match the icon
@@ -278,7 +270,8 @@ export function MagneticButton({
 
     return (
         <button
-            className="border-0 border-red-500/50"
+            id={id}
+            className="border-2 border-red-500/50"
             style={{
                 padding: `${outerPadding}px`,
                 borderRadius: "9999px",

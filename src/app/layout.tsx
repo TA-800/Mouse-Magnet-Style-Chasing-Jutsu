@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                     <Navbar>
                         <MouseFollower speed={0.1} />
                         <MagneticButton
+                            id="home-button"
                             speed={0.1}
                             innerPadding={12}
                             outerPadding={48}
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                             </svg>
                         </MagneticButton>
                         <MagneticButton
+                            id="about-button"
                             innerPadding={12}
                             outerPadding={48}
                             offset={25}
@@ -69,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                             </svg>
                         </MagneticButton>
                         <MagneticButton
+                            id="contact-button"
                             innerPadding={12}
                             outerPadding={48}
                             offset={25}
@@ -99,6 +102,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 function Navbar({ children }: { children: React.ReactNode }) {
     return (
+        // <header className="flex w-full justify-center items-center fixed top-0 left-0 bg-black/25 pl-6 backdrop-blur-lg">
         <header className="flex justify-center items-center">
             <h1 className="text-3xl font-bold mr-auto">Magnet</h1>
             <nav>{children}</nav>
