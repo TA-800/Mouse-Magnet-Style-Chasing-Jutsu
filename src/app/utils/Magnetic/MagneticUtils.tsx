@@ -136,7 +136,6 @@ export function MagneticButton({
     const targetPoint = { x: 0, y: 0 };
     let animationID: number | null = null; // if animationID is null, then the animation loop is not running
     const childRef = useRef<HTMLDivElement>(null);
-    let scrollPosition = { x: 0, y: 0 };
 
     // UseCallback to prevent unnecessary redefinition of lerp function (prevents glitchy animation on state change)
     // Applying new targetPoint to currentPoint
@@ -148,8 +147,6 @@ export function MagneticButton({
         if (animationID && Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) {
             cancelAnimationFrame(animationID);
             animationID = null;
-            // Store current mouse position in scrollPosition when animation stops
-            scrollPosition = { x: currentPoint.x, y: currentPoint.y };
             return;
         }
 
@@ -210,6 +207,8 @@ export function MagneticButton({
 
     const handleMouseLeave = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         targetMagnElement.current = null;
+        // Reenable scrolling
+        document.body.style.overflow = "auto";
 
         // Set targetPoint to 0 when mouse leaves the element
         targetPoint.x = 0;
@@ -236,6 +235,8 @@ export function MagneticButton({
     const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         targetMagnElement.current = e.currentTarget;
         childRef.current!.style.background = "rgba(0, 0, 0, 1)";
+        // Disable scrolling
+        document.body.style.overflow = "hidden";
 
         // change height and width of mouse follower to match the icon
         mouseRef.current!.style.setProperty("--mouseHeight", `${childRef.current!.offsetHeight * mouseScale}px`);

@@ -40,7 +40,7 @@ export default function Home() {
                     Reset:
                     <MagneticButton
                         id="reset"
-                        offset={36 * 4}
+                        offset={36}
                         innerPadding={12}
                         outerPadding={36 * 4}
                         onClickFn={() => {
