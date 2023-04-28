@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useContext, useImperativeHandle } from "react";
 import { MouseContext, MouseContextType } from "../../context/MouseContext";
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 /** Type for the mouseMethodRef that will be used to extract the position-updater method for the mouse-follower */
 export type MouseMethodRefType = {
@@ -15,7 +15,7 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
     const { targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
-    const router = useRouter();
+    const pathname = usePathname();
 
     // Applying new targetMousePosition to currentMousePosition
     const mouseLerp = useCallback(() => {
@@ -71,10 +71,16 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
     // Attach event listener to mousemove
     useEffect(() => {
         document.addEventListener("mousemove", handleMouseMove);
+        // Valid pathname, and mouse still happens to be hovering over a magnetic element.
+        // User can still quickly hover back over magn. btns with link prop (even after fMR is called) on first loads because slow speed.
+        if (pathname && targetMagnElement.current && targetMagnElement.current.getAttribute("data-islink") === "true") {
+            // Call forceResetMouse when url changes
+            forceResetMouse({ targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef });
+        }
         return () => {
             document.removeEventListener("mousemove", handleMouseMove);
         };
-    }, []);
+    }, [pathname]);
 
     // Return mouseLerp through useImperativeHandle so that it can be called from other components
     useImperativeHandle(mouseMethodRef, () => ({
@@ -108,13 +114,13 @@ const mouseFollowerStyleReset = (mouseRef: React.MutableRefObject<HTMLDivElement
  * Force the mouse follower to reset to ordinary mouse-following behavior.
  * Useful for when the mouse is hovering over a magnetic component that is about to be unmounted.
  */
-export function forceResetMouse(context: MouseContextType, e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
+export function forceResetMouse(context: MouseContextType, e?: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     // Reset mouse follower to normal size
     mouseFollowerStyleReset(context.mouseRef);
     // Set isHovering to false
     context.targetMagnElement.current = null;
     // call mouseLerp to reset the mouse position
-    context.mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
+    if (e) context.mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
 }
 /**
  * Wrapper function for a Magnetic component. This will decorate the child(ren) with mouse following behavior.
@@ -296,6 +302,8 @@ export function MagneticButton({
                 borderRadius: "9999px",
                 zIndex: 50,
             }}
+            // Give button a custom link attribute if type is link
+            data-islink={type === "link" ? "true" : "false"}
             // Make the icon move with the mouse (fancy magnet effect)
             onMouseEnter={handleMouseEnter}
             onMouseMove={handleMouseMove}

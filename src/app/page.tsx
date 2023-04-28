@@ -85,7 +85,7 @@ export default function Home() {
                                     offset={6}
                                     innerPadding={6}
                                     outerPadding={12}
-                                    onClickFn={(e) => {
+                                    onClickFn={() => {
                                         setHide(true);
                                     }}>
                                     <svg
@@ -116,19 +116,20 @@ export default function Home() {
                     </p>
                 </BlogPost>
             </div>
-            <MagneticButton
-                id="about-link"
-                type="link"
-                offset={0}
-                innerPadding={2}
-                outerPadding={2}
-                mouseScale={1.01}
-                onClickFn={(e) => {
-                    router.push("/about");
-                }}>
-                Click here to go to the about page.
-            </MagneticButton>
-            <br />
+            <div className="mt-5 mb-5">
+                <MagneticButton
+                    id="about-link"
+                    type="link"
+                    offset={0}
+                    innerPadding={2}
+                    outerPadding={2}
+                    mouseScale={1.01}
+                    onClickFn={(e) => {
+                        router.push("/about");
+                    }}>
+                    Click here to go to the about page.
+                </MagneticButton>
+            </div>
         </>
     );
 }
