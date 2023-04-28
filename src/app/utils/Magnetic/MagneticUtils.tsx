@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useContext, useImperativeHandle, useState } from "react";
+import { useCallback, useEffect, useRef, useContext, useImperativeHandle } from "react";
 import { MouseContext, MouseContextType } from "../../context/MouseContext";
+import { useRouter } from "next/navigation";
 
 /** Type for the mouseMethodRef that will be used to extract the position-updater method for the mouse-follower */
 export type MouseMethodRefType = {
@@ -14,6 +15,7 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
     const { targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef } = useContext<MouseContextType>(MouseContext); // consume context from provider that's wrapping the parent component
     const currentMousePosition = { x: targetMousePosition.x, y: targetMousePosition.y };
     let mouseAnimationID: number | null = null; // if animationID is null, then the animation loop is not running
+    const router = useRouter();
 
     // Applying new targetMousePosition to currentMousePosition
     const mouseLerp = useCallback(() => {
@@ -93,17 +95,24 @@ const MouseFollower = ({ speed = 0.1 }: { speed?: number }) => {
 };
 
 /**
+ * Reset the mouse follower to its original size during ordinary mouse-following behavior.
+ */
+const mouseFollowerStyleReset = (mouseRef: React.MutableRefObject<HTMLDivElement | null>) => {
+    // Reset height and width of mouse follower to 0.75rem
+    mouseRef.current!.style.setProperty("--mouseHeight", "12px");
+    mouseRef.current!.style.setProperty("--mouseWidth", "12px");
+    mouseRef.current!.style.borderRadius = "9999px";
+};
+
+/**
  * Force the mouse follower to reset to ordinary mouse-following behavior.
  * Useful for when the mouse is hovering over a magnetic component that is about to be unmounted.
  */
 export function forceResetMouse(context: MouseContextType, e: React.MouseEvent<HTMLButtonElement, MouseEvent>) {
     // Reset mouse follower to normal size
-    context.mouseRef.current!.style.setProperty("--mouseHeight", "12px");
-    context.mouseRef.current!.style.setProperty("--mouseWidth", "12px");
-
+    mouseFollowerStyleReset(context.mouseRef);
     // Set isHovering to false
     context.targetMagnElement.current = null;
-
     // call mouseLerp to reset the mouse position
     context.mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
 }
@@ -112,6 +121,8 @@ export function forceResetMouse(context: MouseContextType, e: React.MouseEvent<H
  */
 export function MagneticButton({
     id,
+    type = "button",
+    unmountOnClick = false,
     outerPadding = 48,
     innerPadding = 12,
     offset = 10,
@@ -122,6 +133,8 @@ export function MagneticButton({
     children,
 }: {
     id: string;
+    type?: "button" | "link";
+    unmountOnClick?: boolean;
     outerPadding?: number;
     innerPadding?: number;
     offset?: number;
@@ -223,9 +236,8 @@ export function MagneticButton({
             childRef.current.style.transitionDuration = "0.2s";
         }
 
-        // Reset height and width of mouse follower to 0.75rem
-        mouseRef.current!.style.setProperty("--mouseHeight", "12px");
-        mouseRef.current!.style.setProperty("--mouseWidth", "12px");
+        // Reset mouse follower style
+        mouseFollowerStyleReset(mouseRef);
 
         // Run animation loops if not running (could happen if button was scrolled away from instead of hovered)
         mouseMethodRef.current!.handleMouseMove(e as unknown as MouseEvent);
@@ -234,8 +246,10 @@ export function MagneticButton({
 
     const handleMouseEnter = useCallback((e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         targetMagnElement.current = e.currentTarget;
-        childRef.current!.style.background = "rgba(0, 0, 0, 1)";
-        // Disable scrolling
+        // If button, change background to black
+        if (type === "button") childRef.current!.style.background = "rgba(0, 0, 0, 1)";
+        else mouseRef.current!.style.borderRadius = "8px";
+
         document.body.style.overflow = "hidden";
 
         // change height and width of mouse follower to match the icon
@@ -253,8 +267,10 @@ export function MagneticButton({
             // temporarily speed up the transition
             childRef.current.style.transitionDuration = "0s";
             childRef.current.style.scale = clickScaleDown;
-            childRef.current.style.backgroundColor = "rgba(255, 255, 255, 1)";
-            childRef.current.style.color = "rgba(0, 0, 0, 1)";
+            if (type === "button") {
+                childRef.current.style.backgroundColor = "rgba(255, 255, 255, 1)";
+                childRef.current.style.color = "rgba(0, 0, 0, 1)";
+            }
         }
     }, []);
 
@@ -264,15 +280,17 @@ export function MagneticButton({
             // Reset transition duration
             childRef.current.style.transitionDuration = "0.2s";
             childRef.current.style.scale = "1";
-            childRef.current.style.backgroundColor = "rgba(0, 0, 0, 1)";
-            childRef.current.style.color = "rgba(255, 255, 255, 1)";
+            if (type === "button") {
+                childRef.current.style.backgroundColor = "rgba(0, 0, 0, 1)";
+                childRef.current.style.color = "rgba(255, 255, 255, 1)";
+            }
         }
     }, []);
 
     return (
         <button
             id={id}
-            className="border-2 border-red-500/50"
+            className="border-0 border-red-500/50"
             style={{
                 padding: `${outerPadding}px`,
                 borderRadius: "9999px",
@@ -284,20 +302,45 @@ export function MagneticButton({
             onMouseLeave={handleMouseLeave}
             onMouseDown={vfxMouseDown}
             onMouseUp={vfxMouseUp}
-            onClick={onClickFn}>
-            <div
-                ref={childRef}
-                style={{
-                    padding: `${innerPadding}px`,
-                    borderRadius: "9999px",
-                    // Apply transition only to scale and background properties
-                    transitionProperty: "scale, background",
-                    transitionDuration: "0.2s",
-                    transitionTimingFunction: "ease-out",
-                    zIndex: 51,
-                }}>
-                {children}
-            </div>
+            onClick={(e) => {
+                if (type === "button" && !unmountOnClick) onClickFn(e);
+                else {
+                    // If it's a link, force mouse reset then run onClickFn (that should redirect to the link)
+                    forceResetMouse({ targetMagnElement, targetMousePosition, mouseRef, mouseMethodRef }, e);
+                    onClickFn(e);
+                }
+            }}>
+            {type === "button" ? (
+                <div
+                    ref={childRef}
+                    style={{
+                        padding: `${innerPadding}px`,
+                        borderRadius: "9999px",
+                        // Apply transition only to scale and background properties
+                        transitionProperty: "scale, background",
+                        transitionDuration: "0.2s",
+                        transitionTimingFunction: "ease-out",
+                        zIndex: 51,
+                    }}>
+                    {children}
+                </div>
+            ) : (
+                <div
+                    ref={childRef}
+                    style={{
+                        padding: `${innerPadding}px`,
+                        borderRadius: "8px",
+                        color: "rgba(255, 255, 255, 1)",
+                        // Apply transition only to scale and background properties
+                        transitionProperty: "scale, background",
+                        transitionDuration: "0.2s",
+                        transitionTimingFunction: "ease-out",
+                        // Automatically differentiate links with blend mode color difference
+                        mixBlendMode: "difference",
+                    }}>
+                    {children}
+                </div>
+            )}
         </button>
     );
 }

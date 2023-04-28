@@ -16,7 +16,7 @@
     /* Reference: https://css-tricks.com/almanac/properties/s/scrollbar-gutter/ */
     scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scrollbar-color: #ffffff #000000;
+    scrollbar-color: hsl(236, 35%, 12%) rgba(0, 3, 34, 1);
 }
 body {
     background: rgb(0, 3, 34);
