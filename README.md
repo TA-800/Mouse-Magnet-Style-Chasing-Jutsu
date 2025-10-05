@@ -1,4 +1,4 @@
-Try it here: https://magnetic-mouse.vercel.app/
+Try it here: ~~https://magnetic-mouse.vercel.app/~~ (edit: gone)
 
 Still a work in progress, refining it as much as possible.
 
